@@ -1,0 +1,16 @@
+{% extends 'inventory/base.html' %}
+{% block title %}Welcome - InventoryPro{% endblock %}
+
+{% block content %}
+<div class="p-5 mb-4 bg-light rounded-3">
+    <div class="container-fluid py-5">
+        <h1 class="display-5 fw-bold">Welcome to InventoryPro</h1>
+        <p class="col-md-8 fs-4">Your real-time inventory management solution with predictive analysis. Take control of your stock, reduce waste, and make smarter business decisions.</p>
+        {% if user.is_authenticated %}
+            <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">Go to Your Dashboard</a>
+        {% else %}
+            <a href="{% url 'signup' %}" class="btn btn-primary btn-lg" type="button">Get Started for Free</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
