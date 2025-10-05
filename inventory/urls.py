@@ -6,4 +6,7 @@ urlpatterns = [
     path('signup/', views.signup, name='signup'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('add_product/', views.add_product, name='add_product'),
+    path('record_sales/', views.record_sales, name='record_sales'),
+    path('advance_day/', views.advance_day, name='advance_day'),
+    path('mark_as_holiday/', views.mark_as_holiday, name='mark_as_holiday'),
 ]
