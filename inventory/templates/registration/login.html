@@ -1,0 +1,17 @@
+{% extends 'inventory/base.html' %}
+{% load bootstrap5 %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h2>Log In to Your Account</h2>
+        <form method="post" class="form">
+            {% csrf_token %}
+            {% bootstrap_form form %}
+            {% bootstrap_button button_type="submit" content="Login" %}
+        </form>
+    </div>
+</div>
+{% endblock %}
