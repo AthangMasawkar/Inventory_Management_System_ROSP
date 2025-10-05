@@ -1,0 +1,109 @@
+{% extends 'inventory/base.html' %}
+{% load bootstrap5 %}
+
+{% block title %}Visualizations{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Business Insights</h2>
+
+    <div class="row">
+        <div class="col-lg-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    Daily Sales Trend (Last 14 Days)
+                </div>
+                <div class="card-body">
+                    <canvas id="salesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-7 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    Current Inventory Levels
+                </div>
+                <div class="card-body">
+                    <canvas id="inventoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    Revenue by Product (Last 14 Days)
+                </div>
+                <div class="card-body">
+                    <canvas id="revenuePieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<script>
+    // --- Sales Trend Line Chart (Same as before) ---
+    const salesCtx = document.getElementById('salesChart').getContext('2d');
+    const salesLabels = JSON.parse('{{ sales_labels|safe }}');
+    const salesValues = JSON.parse('{{ sales_values|safe }}');
+    new Chart(salesCtx, {
+        type: 'line', data: { labels: salesLabels, datasets: [{ label: 'Total Sales (₹)', data: salesValues, fill: true, borderColor: 'rgb(75, 192, 192)', tension: 0.1 }] },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+
+    // --- Inventory Levels Bar Chart (Same as before) ---
+    const inventoryCtx = document.getElementById('inventoryChart').getContext('2d');
+    const inventoryLabels = JSON.parse('{{ inventory_labels|safe }}');
+    const inventoryValues = JSON.parse('{{ inventory_values|safe }}');
+    new Chart(inventoryCtx, {
+        type: 'bar', data: { labels: inventoryLabels, datasets: [{ label: 'Quantity in Stock', data: inventoryValues, backgroundColor: ['rgba(255, 99, 132, 0.5)', 'rgba(54, 162, 235, 0.5)', 'rgba(255, 206, 86, 0.5)', 'rgba(75, 192, 192, 0.5)', 'rgba(153, 102, 255, 0.5)', 'rgba(255, 159, 64, 0.5)'], borderWidth: 1 }] },
+        options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } }
+    });
+
+    // --- UPDATED: Revenue Pie Chart ---
+    const pieCtx = document.getElementById('revenuePieChart').getContext('2d');
+    const pieLabels = JSON.parse('{{ pie_labels|safe }}');
+    const pieValues = JSON.parse('{{ pie_values|safe }}');
+    new Chart(pieCtx, {
+        type: 'pie',
+        data: {
+            labels: pieLabels,
+            datasets: [{
+                label: 'Revenue (₹)',
+                data: pieValues,
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)', 'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)', 'rgba(255, 159, 64, 0.7)'
+                ],
+                hoverOffset: 4
+            }]
+        },
+        // --- THIS LINE IS ADDED --- Register the plugin for this chart ONLY.
+        plugins: [ChartDataLabels],
+        options: {
+            responsive: true,
+            plugins: {
+                datalabels: {
+                    formatter: (value, ctx) => {
+                        let sum = 0;
+                        let dataArr = ctx.chart.data.datasets[0].data;
+                        dataArr.map(data => {
+                            sum += data;
+                        });
+                        let percentage = (value*100 / sum).toFixed(1) + "%";
+                        return percentage;
+                    },
+                    color: '#fff',
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

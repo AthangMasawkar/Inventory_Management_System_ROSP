@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 import dj_database_url
 from dotenv import load_dotenv
+from celery.schedules import crontab
 
 load_dotenv()
 
@@ -131,3 +132,22 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Redirects
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+
+# --- EMAIL CONFIGURATION ---
+EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
+
+# --- CELERY CONFIGURATION ---
+CELERY_BROKER_URL = os.environ.get('REDIS_URL')
+CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL')
+# This schedules the task to run every day at 7 AM
+CELERY_BEAT_SCHEDULE = {
+    'send-low-stock-alerts-every-day': {
+        'task': 'inventory.tasks.check_stock_and_send_alerts',
+        'schedule': crontab(hour=7, minute=0),
+    },
+}
+
+SENDGRID_SANDBOX_MODE_IN_DEBUG = False
