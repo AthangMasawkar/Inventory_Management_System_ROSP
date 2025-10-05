@@ -3,14 +3,41 @@
 
 {% block content %}
 <div class="container">
+    {% if alerts %}
+        <div class="mb-4">
+            <h4>⚠️ Important Alerts</h4>
+            {% for alert in alerts %}
+            <div class="alert alert-{{ alert.status_color }}" role="alert">
+                {% if alert.status == 'Out of Stock' %}
+                    <strong>{{ alert.status }}:</strong> {{ alert.product.name }} is completely out of stock. Restock now.
+                {% else %}
+                    <strong>{{ alert.status }}:</strong> {{ alert.product.name }} is running low.
+                    Only <strong>{{ alert.product.quantity }}</strong> left in stock.
+                    (Estimated to last {{ alert.days_to_stockout }} more days).
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+<div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-0">Dashboard</h2>
             <p class="text-muted">Current Simulated Date: <strong>{{ simulated_date|date:"F d, Y" }}</strong></p>
         </div>
         <div>
-            <a href="{% url 'mark_as_holiday' %}" class="btn btn-info">Mark as Holiday</a>
-            <a href="{% url 'advance_day' %}" class="btn btn-success">Advance Day &raquo;</a>
+            {% if not sales_recorded_today %}
+                <a href="{% url 'mark_as_holiday' %}" class="btn btn-info">Mark as Holiday</a>
+            {% else %}
+                <a href="#" class="btn btn-info disabled" title="You cannot mark a day as a holiday after recording sales.">Mark as Holiday</a>
+            {% endif %}
+
+            {% if sales_recorded_today %}
+                <a href="{% url 'advance_day' %}" class="btn btn-success">Advance Day &raquo;</a>
+            {% else %}
+                <a href="#" class="btn btn-success disabled" title="Please record today's sales before advancing the day.">Advance Day &raquo;</a>
+            {% endif %}
         </div>
     </div>
 
@@ -27,26 +54,34 @@
         <div class="card-body">
             {% if products %}
             <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th scope="col">Product Name</th>
-                            <th scope="col">Quantity in Stock</th>
-                            <th scope="col">Reorder Point</th>
-                            <th scope="col">Selling Price</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for product in products %}
-                        <tr>
-                            <td>{{ product.name }}</td>
-                            <td>{{ product.quantity }}</td>
-                            <td>{{ product.reorder_point }}</td>
-                            <td>₹{{ product.selling_price|floatformat:2 }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <table class="table table-striped table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th scope="col">Product Name</th>
+                                <th scope="col" class="text-center">Quantity in Stock</th>
+                                <th scope="col" class="text-center">Reorder Point</th>
+                                <th scope="col" class="text-center">Selling Price</th>
+                                <th scope="col" style="width: 20%;">Restock</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr>
+                                <td>{{ product.name }}</td>
+                                <td class="text-center">{{ product.quantity }}</td>
+                                <td class="text-center">{{ product.reorder_point }}</td>
+                                <td class="text-center">₹{{ product.selling_price|floatformat:2 }}</td>
+                                <td>
+                                    <form action="{% url 'update_stock' product.id %}" method="post" class="d-flex">
+                                        {% csrf_token %}
+                                        <input type="number" name="quantity_to_add" class="form-control form-control-sm" placeholder="Add Qty" min="1" required>
+                                        <button type="submit" class="btn btn-primary btn-sm ms-2">Add</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
             </div>
             {% else %}
             <div class="text-center p-4">

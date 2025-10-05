@@ -7,6 +7,10 @@ from .forms import CustomUserCreationForm, ProductForm
 from .models import UserProfile, Product, Sale, DailyRecord
 from django.contrib.auth import login
 from django.db import transaction
+import json
+from django.db.models import Sum, F
+from django.db.models.functions import TruncDay
+from .utils import generate_product_insights
 
 def home(request):
     return render(request, 'inventory/home.html')
@@ -29,14 +33,24 @@ def signup(request):
 
 @login_required
 def dashboard(request):
-    # Get all products owned by the current logged-in user
     products = Product.objects.filter(owner=request.user)
-    # Get the user's profile to find their current simulated date
     user_profile = get_object_or_404(UserProfile, user=request.user)
+    simulated_date = user_profile.current_simulated_date
+
+    insights = generate_product_insights(request.user, simulated_date)
+    alerts = [item for item in insights if item['status'] in ['Critical', 'Low Stock', 'Out of Stock']]
+
+    # NEW: Check if sales have been recorded for the current simulated day
+    sales_recorded_today = DailyRecord.objects.filter(
+        user=request.user, 
+        date=simulated_date
+    ).exists()
     
     context = {
         'products': products,
-        'simulated_date': user_profile.current_simulated_date,
+        'simulated_date': simulated_date,
+        'alerts': alerts,
+        'sales_recorded_today': sales_recorded_today, # Pass the flag to the template
     }
     return render(request, 'inventory/dashboard.html', context)
 
@@ -140,4 +154,89 @@ def mark_as_holiday(request):
     user_profile.save()
     
     messages.warning(request, f'{simulated_date.strftime("%Y-%m-%d")} was marked as a holiday. Time advanced to the next day.')
+    return redirect('dashboard')
+
+
+@login_required
+def visualizations(request):
+    user_profile = get_object_or_404(UserProfile, user=request.user)
+    simulated_date = user_profile.current_simulated_date
+    
+    # --- Chart 1: Daily Sales Trend (Last 14 Days) ---
+    fourteen_days_ago = simulated_date - timedelta(days=14)
+    sales_data = Sale.objects.filter(
+        user=request.user, 
+        sale_date__gte=fourteen_days_ago,
+        sale_date__lte=simulated_date
+    ).annotate(day=TruncDay('sale_date')).values('day').annotate(daily_total=Sum('total_price')).order_by('day')
+    
+    sales_labels = [s['day'].strftime('%b %d') for s in sales_data]
+    sales_values = [float(s['daily_total']) for s in sales_data]
+
+    # --- Chart 2: Current Inventory Levels ---
+    products = Product.objects.filter(owner=request.user).order_by('-quantity')
+    inventory_labels = [p.name for p in products]
+    inventory_values = [p.quantity for p in products]
+    
+    # --- NEW: Chart 3: Sales Revenue by Product (Last 14 Days) ---
+    revenue_data = Sale.objects.filter(
+        user=request.user,
+        sale_date__gte=fourteen_days_ago,
+        sale_date__lte=simulated_date
+    ).values('product__name').annotate(
+        total_revenue=Sum('total_price')
+    ).order_by('-total_revenue')
+
+    pie_labels = [item['product__name'] for item in revenue_data]
+    pie_values = [float(item['total_revenue']) for item in revenue_data]
+    
+    context = {
+        'sales_labels': json.dumps(sales_labels),
+        'sales_values': json.dumps(sales_values),
+        'inventory_labels': json.dumps(inventory_labels),
+        'inventory_values': json.dumps(inventory_values),
+        'pie_labels': json.dumps(pie_labels),      # Add pie chart labels
+        'pie_values': json.dumps(pie_values),      # Add pie chart values
+    }
+    return render(request, 'inventory/visualizations.html', context)
+
+
+@login_required
+def predictions(request):
+    # Get the user's profile to find their simulated date
+    user_profile = get_object_or_404(UserProfile, user=request.user)
+    simulated_date = user_profile.current_simulated_date
+
+    # Pass the simulated_date to the insights function
+    insights = generate_product_insights(request.user, simulated_date)
+    
+    context = {
+        'insights': insights
+    }
+    return render(request, 'inventory/predictions.html', context)
+
+
+@login_required
+def update_stock(request, product_id):
+    # Ensure the request is a POST request
+    if request.method == 'POST':
+        # Get the specific product that belongs to the logged-in user
+        product = get_object_or_404(Product, id=product_id, owner=request.user)
+        
+        try:
+            # Get the quantity to add from the form. Default to 0 if not present.
+            quantity_to_add = int(request.POST.get('quantity_to_add', 0))
+            
+            if quantity_to_add > 0:
+                # Add the new quantity to the existing stock
+                product.quantity += quantity_to_add
+                product.save()
+                messages.success(request, f'Successfully added {quantity_to_add} units to {product.name}.')
+            else:
+                messages.warning(request, 'Please enter a positive quantity to add.')
+
+        except ValueError:
+            messages.error(request, 'Invalid quantity entered. Please enter a number.')
+            
+    # Redirect back to the dashboard regardless of the outcome
     return redirect('dashboard')

@@ -1,0 +1,108 @@
+{% extends 'inventory/base.html' %}
+{% load bootstrap5 %}
+
+{% block title %}Predictions & Insights{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Inventory Predictions & Insights</h2>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            Product Status Overview
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th class="text-center">Current Stock</th>
+                            <th class="text-center">Avg. Daily Sales (14d)</th>
+                            <th class="text-center">Est. Days to Stockout</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in insights %}
+                        <tr>
+                            <td><strong>{{ item.product.name }}</strong></td>
+                            <td class="text-center">{{ item.product.quantity }}</td>
+                            <td class="text-center">{{ item.avg_daily_sales }}</td>
+                            <td class="text-center">
+                                {% if item.avg_daily_sales > 0 %}
+                                    {{ item.days_to_stockout }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-{{ item.status_color }}">{{ item.status }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    7-Day Revenue Forecast
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th class="text-end">Est. Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in insights %}
+                                {% if item.forecasted_revenue > 0 %}
+                                <tr>
+                                    <td>{{ item.product.name }}</td>
+                                    <td class="text-end">₹{{ item.forecasted_revenue|floatformat:2 }}</td>
+                                </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    Restock Recommendations
+                </div>
+                <div class="card-body">
+                     <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th class="text-end">Recommended Qty to Order</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                             {% for item in insights %}
+                                {% if item.recommended_restock > 0 %}
+                                <tr>
+                                    <td>{{ item.product.name }}</td>
+                                    <td class="text-end"><strong>{{ item.recommended_restock }}</strong></td>
+                                </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
