@@ -48,7 +48,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 
 <script>
-    // --- Sales Trend Line Chart (Same as before) ---
     const salesCtx = document.getElementById('salesChart').getContext('2d');
     const salesLabels = JSON.parse('{{ sales_labels|safe }}');
     const salesValues = JSON.parse('{{ sales_values|safe }}');
@@ -57,7 +56,6 @@
         options: { responsive: true, scales: { y: { beginAtZero: true } } }
     });
 
-    // --- Inventory Levels Bar Chart (Same as before) ---
     const inventoryCtx = document.getElementById('inventoryChart').getContext('2d');
     const inventoryLabels = JSON.parse('{{ inventory_labels|safe }}');
     const inventoryValues = JSON.parse('{{ inventory_values|safe }}');
@@ -66,7 +64,6 @@
         options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } }
     });
 
-    // --- UPDATED: Revenue Pie Chart ---
     const pieCtx = document.getElementById('revenuePieChart').getContext('2d');
     const pieLabels = JSON.parse('{{ pie_labels|safe }}');
     const pieValues = JSON.parse('{{ pie_values|safe }}');
@@ -85,7 +82,6 @@
                 hoverOffset: 4
             }]
         },
-        // --- THIS LINE IS ADDED --- Register the plugin for this chart ONLY.
         plugins: [ChartDataLabels],
         options: {
             responsive: true,

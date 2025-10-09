@@ -15,6 +15,4 @@ class CustomUserCreationForm(UserCreationForm):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        # We only want the user to fill in these fields.
-        # The 'owner' will be set automatically in the view.
         fields = ['name', 'quantity', 'reorder_point', 'selling_price']

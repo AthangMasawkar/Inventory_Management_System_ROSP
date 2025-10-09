@@ -20,8 +20,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # Add Django's built-in auth URLs for login, logout, password reset, etc.
     path('accounts/', include('django.contrib.auth.urls')),
-    # Include your inventory app's URLs
     path('', include('inventory.urls')),
 ]

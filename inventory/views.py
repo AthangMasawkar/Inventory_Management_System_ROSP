@@ -40,7 +40,6 @@ def dashboard(request):
     insights = generate_product_insights(request.user, simulated_date)
     alerts = [item for item in insights if item['status'] in ['Critical', 'Low Stock', 'Out of Stock']]
 
-    # NEW: Check if sales have been recorded for the current simulated day
     sales_recorded_today = DailyRecord.objects.filter(
         user=request.user, 
         date=simulated_date
@@ -50,7 +49,7 @@ def dashboard(request):
         'products': products,
         'simulated_date': simulated_date,
         'alerts': alerts,
-        'sales_recorded_today': sales_recorded_today, # Pass the flag to the template
+        'sales_recorded_today': sales_recorded_today,
     }
     return render(request, 'inventory/dashboard.html', context)
 
@@ -60,9 +59,7 @@ def add_product(request):
     if request.method == 'POST':
         form = ProductForm(request.POST)
         if form.is_valid():
-            # Create a Product instance but don't save to the database yet
             product = form.save(commit=False)
-            # Assign the current logged-in user as the owner
             product.owner = request.user
             product.save()
             messages.success(request, f'Product "{product.name}" has been added successfully.')
@@ -79,7 +76,6 @@ def record_sales(request):
     user_profile = get_object_or_404(UserProfile, user=request.user)
     simulated_date = user_profile.current_simulated_date
     
-    # Check if a record for this day already exists
     daily_record_exists = DailyRecord.objects.filter(user=request.user, date=simulated_date).exists()
     
     if request.method == 'POST':
@@ -87,7 +83,7 @@ def record_sales(request):
             messages.error(request, f'Sales for {simulated_date.strftime("%Y-%m-%d")} have already been recorded.')
             return redirect('dashboard')
 
-        # Use a transaction to ensure all or no database operations are completed
+        # Using a transaction to ensure all or no database operations are completed
         with transaction.atomic():
             for key, value in request.POST.items():
                 if key.startswith('quantity_'):
@@ -114,11 +110,11 @@ def record_sales(request):
                                 # This will roll back the transaction
                                 raise Exception(f'Stock issue for {product.name}')
                     except (ValueError, IndexError, Product.DoesNotExist):
-                        # Handle potential errors gracefully
+                        # Handling potential errors gracefully
                         messages.error(request, 'An error occurred while processing sales data.')
                         raise Exception('Data processing error')
 
-            # Mark the day's sales as recorded
+            # Marking the day's sales as recorded
             DailyRecord.objects.create(user=request.user, date=simulated_date, sales_recorded=True)
         
         messages.success(request, f'Sales for {simulated_date.strftime("%Y-%m-%d")} recorded successfully.')
@@ -146,10 +142,8 @@ def mark_as_holiday(request):
     user_profile = get_object_or_404(UserProfile, user=request.user)
     simulated_date = user_profile.current_simulated_date
     
-    # Create a record marking the day as a holiday
     DailyRecord.objects.get_or_create(user=request.user, date=simulated_date, defaults={'is_holiday': True, 'sales_recorded': True})
     
-    # Automatically advance to the next day
     user_profile.current_simulated_date += timedelta(days=1)
     user_profile.save()
     
@@ -162,7 +156,7 @@ def visualizations(request):
     user_profile = get_object_or_404(UserProfile, user=request.user)
     simulated_date = user_profile.current_simulated_date
     
-    # --- Chart 1: Daily Sales Trend (Last 14 Days) ---
+
     fourteen_days_ago = simulated_date - timedelta(days=14)
     sales_data = Sale.objects.filter(
         user=request.user, 
@@ -173,12 +167,12 @@ def visualizations(request):
     sales_labels = [s['day'].strftime('%b %d') for s in sales_data]
     sales_values = [float(s['daily_total']) for s in sales_data]
 
-    # --- Chart 2: Current Inventory Levels ---
+
     products = Product.objects.filter(owner=request.user).order_by('-quantity')
     inventory_labels = [p.name for p in products]
     inventory_values = [p.quantity for p in products]
     
-    # --- NEW: Chart 3: Sales Revenue by Product (Last 14 Days) ---
+
     revenue_data = Sale.objects.filter(
         user=request.user,
         sale_date__gte=fourteen_days_ago,
@@ -195,19 +189,17 @@ def visualizations(request):
         'sales_values': json.dumps(sales_values),
         'inventory_labels': json.dumps(inventory_labels),
         'inventory_values': json.dumps(inventory_values),
-        'pie_labels': json.dumps(pie_labels),      # Add pie chart labels
-        'pie_values': json.dumps(pie_values),      # Add pie chart values
+        'pie_labels': json.dumps(pie_labels),
+        'pie_values': json.dumps(pie_values),
     }
     return render(request, 'inventory/visualizations.html', context)
 
 
 @login_required
 def predictions(request):
-    # Get the user's profile to find their simulated date
     user_profile = get_object_or_404(UserProfile, user=request.user)
     simulated_date = user_profile.current_simulated_date
 
-    # Pass the simulated_date to the insights function
     insights = generate_product_insights(request.user, simulated_date)
     
     context = {
@@ -218,17 +210,13 @@ def predictions(request):
 
 @login_required
 def update_stock(request, product_id):
-    # Ensure the request is a POST request
     if request.method == 'POST':
-        # Get the specific product that belongs to the logged-in user
         product = get_object_or_404(Product, id=product_id, owner=request.user)
         
         try:
-            # Get the quantity to add from the form. Default to 0 if not present.
             quantity_to_add = int(request.POST.get('quantity_to_add', 0))
             
             if quantity_to_add > 0:
-                # Add the new quantity to the existing stock
                 product.quantity += quantity_to_add
                 product.save()
                 messages.success(request, f'Successfully added {quantity_to_add} units to {product.name}.')
@@ -238,5 +226,4 @@ def update_stock(request, product_id):
         except ValueError:
             messages.error(request, 'Invalid quantity entered. Please enter a number.')
             
-    # Redirect back to the dashboard regardless of the outcome
     return redirect('dashboard')
