@@ -26,13 +26,11 @@ def generate_product_insights(user, simulated_date):
         forecasted_revenue = avg_daily_sales * float(product.selling_price) * 7
         
         
-        # Goal: Have enough stock to last the next 14 days
         desired_stock = avg_daily_sales * 14
         recommended_restock = 0
         if product.quantity < desired_stock:
             recommended_restock = round(desired_stock - product.quantity)
 
-        # Determine the status of the product
         status = "Healthy"
         status_color = "success"
         if product.quantity == 0:
@@ -54,8 +52,8 @@ def generate_product_insights(user, simulated_date):
             'days_to_stockout': round(days_to_stockout, 1),
             'status': status,
             'status_color': status_color,
-            'forecasted_revenue': round(forecasted_revenue, 2), # Add new metric
-            'recommended_restock': recommended_restock,       # Add new metric
+            'forecasted_revenue': round(forecasted_revenue, 2),
+            'recommended_restock': recommended_restock,
         })
         
     return insights
